@@ -11,18 +11,18 @@ public class ZombieController : MonoBehaviour
 
     private Transform player;         // Ссылка на игрока
     private Animator animator;        // Ссылка на аниматор
-
+    private Rigidbody2D rb;
     [SerializeField]
     private float currentSpeed;       // Текущая скорость зомби для отображения в инспекторе
-
+    private Vector3 previousPosition; 
     void Start()
     {
         player = GameObject.FindGameObjectWithTag("Player").transform; // Находим игрока по тегу
         animator = GetComponent<Animator>(); // Получаем компонент Animator
-
+        rb = GetComponent<Rigidbody2D>(); // Получаем компонент Rigidbody2D
         // Инициализируем здоровье зомби
         health = maxHealth;
-
+        previousPosition = transform.position;
         // Устанавливаем maxValue для слайдера здоровья
         if (healthBar != null)
         {
@@ -31,18 +31,59 @@ public class ZombieController : MonoBehaviour
         }
     }
 
-    void Update()
+    public bool log;
+    void FixedUpdate() // Use FixedUpdate for physics calculations
     {
-        // Движение зомби к игроку с постоянной скоростью, если зомби жив
         if (player != null && health > 0)
         {
-            Vector2 direction = (player.position - transform.position).normalized; // Нормализуем направление к игроку
-            transform.position += (Vector3)(direction * speed * Time.deltaTime);   // Движение с постоянной скоростью
+            Vector2 direction = player.position - transform.position;
+            direction.Normalize(); // Make direction a unit vector
 
-            // Обновляем значение текущей скорости для инспектора
-            currentSpeed = speed; // Скорость должна быть постоянной, равной переменной speed
+            rb.velocity = direction * speed; // Set velocity directly
+
+            if (log)
+            {
+                currentSpeed = rb.velocity.magnitude;
+                print("Коэффициент скорости: " + currentSpeed);
+                if (Mathf.Approximately(currentSpeed, speed))
+                {
+                    print("Скорость соответствует одному юниту в секунду, определенному переменной speed.");
+                }
+                else
+                {
+                    print("Скорость не соответствует одному юниту в секунду, определенному переменной speed.");
+                }
+                print(transform.position - previousPosition + "!!!!!!сука +");
+            }
+            previousPosition = transform.position;
         }
     }
+    /*  void Update()
+    {
+        // Движение зомби к игроку с постоянной скоростью
+        if (player != null && health > 0)
+        {
+            // Постоянное движение к игроку с использованием Vector2.MoveTowards
+            Vector2 newPosition = Vector2.MoveTowards(transform.position, player.position, speed * Time.deltaTime);
+            rb.MovePosition(newPosition);
+            if(log) 
+            {
+                float currentSpeed = Vector2.Distance(transform.position, previousPosition) / Time.deltaTime;
+                print("Коэффициент скорости: " + currentSpeed);
+                if (Mathf.Approximately(currentSpeed, speed))
+                {
+                    print("Скорость соответствует одному юниту в секунду, определенному переменной speed.");
+                }
+                else
+                {
+                    print("Скорость не соответствует одному юниту в секунду, определенному переменной speed.");
+                }
+                print(transform.position - previousPosition + "!!!!!!сука +");
+            }
+            previousPosition = transform.position;
+        }
+    }
+*/
 
     public void TakeDamage(int damage)
     {
