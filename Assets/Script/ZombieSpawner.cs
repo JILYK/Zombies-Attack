@@ -1,14 +1,20 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ZombieSpawner : MonoBehaviour
 {
     public GameObject zombiePrefab; // Префаб зомби
-
+    public Transform poolZombies; // Ссылка на объект PoolZombi, внутри которого находятся зомби
+    private List<Transform> zombieList = new List<Transform>();
     // Массив объектов зон спавна
     public GameObject[] spawnAreas = new GameObject[3];
 
+
+    
+    
     // Параметры для разных типов зомби
     [System.Serializable]
     public class ZombieType
@@ -38,20 +44,29 @@ public class ZombieSpawner : MonoBehaviour
         StartCoroutine(SpawnZombies());
     }
 
+    void FixedUpdate()
+    {
+        SortZombies(); // Сортируем зомби по оси Y каждый кадр
+    }
+
     IEnumerator AdjustDifficultyOverTime()
     {
         while (currentSpawnInterval > minimumSpawnInterval)
         {
             yield return new WaitForSeconds(difficultyIncreaseInterval);
             currentSpawnInterval = Mathf.Max(minimumSpawnInterval, currentSpawnInterval - spawnIntervalDecrease);
-       //     Debug.Log($"Увеличение сложности: новый интервал спавна {currentSpawnInterval} секунд.");
+            Debug.Log($"Увеличение сложности: новый интервал спавна {currentSpawnInterval} секунд.");
         }
     }
 
     IEnumerator SpawnZombies()
     {
+      
         while (true)
         {
+            if (zombieList.Count < 120)
+            {
+                
             // Выбираем случайную область спавна
             GameObject chosenArea = spawnAreas[Random.Range(0, spawnAreas.Length)];
 
@@ -67,13 +82,12 @@ public class ZombieSpawner : MonoBehaviour
                 Random.Range(areaCollider.bounds.min.x, areaCollider.bounds.max.x),
                 Random.Range(areaCollider.bounds.min.y, areaCollider.bounds.max.y)
             );
-
-            // Выбираем тип зомби на основе вероятности
+            
             ZombieType chosenType = ChooseZombieType();
             if (chosenType != null)
             {
-                // Создаем зомби внутри родительского объекта
-                GameObject zombie = Instantiate(zombiePrefab, spawnPosition, Quaternion.identity, this.transform);
+                // Создаем зомби внутри объекта poolZombies
+                GameObject zombie = Instantiate(zombiePrefab, spawnPosition, Quaternion.identity, poolZombies);
                 ZombieController zombieController = zombie.GetComponent<ZombieController>();
 
                 // Устанавливаем параметры зомби
@@ -87,17 +101,11 @@ public class ZombieSpawner : MonoBehaviour
                 {
                     zombieImage.color = chosenType.color;
                 }
-
-                // Отладочное сообщение в консоли
-                //                Debug.Log($"Зомби типа {chosenType.name} спавнится в позиции {spawnPosition} со скоростью {chosenType.speed} и здоровьем {chosenType.health}");
+            zombieList.Add(zombie.transform);
             }
-            else
-            {
-            //    Debug.LogWarning("Не удалось выбрать тип зомби для спавна.");
-            }
-
             // Ожидание перед следующим спавном
             yield return new WaitForSeconds(currentSpawnInterval);
+            }
         }
     }
 
@@ -116,6 +124,36 @@ public class ZombieSpawner : MonoBehaviour
         }
         return zombieTypes[zombieTypes.Length - 1]; // Возвращаем последний тип по умолчанию, если выбор не удался
     }
+
+    // Метод для сортировки зомби по оси Y
+    void SortZombies()
+    {
+        // Удаляем уничтоженные объекты из списка
+        zombieList.RemoveAll(zombie => zombie == null);
+
+        // Пороговое значение для сравнения (эпсилон)
+        float epsilon = 0.01f;  // Можно настроить в зависимости от нужной точности
+
+        // Сортировка списка зомби по оси Y в обратном порядке с учётом эпсилона
+        zombieList.Sort((img1, img2) =>
+        {
+            float difference = img1.transform.position.y - img2.transform.position.y;
+            if (Mathf.Abs(difference) < epsilon)
+            {
+                return 0; // Считаем их равными, если разница меньше эпсилона
+            }
+            return difference > 0 ? -1 : 1; // Меняем местами для обратной сортировки
+        });
+
+        // Применение порядка отрисовки
+        for (int i = 0; i < zombieList.Count; i++)
+        {
+            zombieList[i].transform.SetSiblingIndex(i);
+        }
+    }
+
+
+
 
     // Визуализация областей спавна в редакторе
     private void OnDrawGizmos()

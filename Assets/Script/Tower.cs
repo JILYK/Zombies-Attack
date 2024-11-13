@@ -35,7 +35,7 @@ public class Tower : MonoBehaviour
                 {
                     PlayerPrefs.SetInt("HighScore", score); // Сохраняем новый рекорд
                     PlayerPrefs.Save(); // Сохраняем изменения
-                    endGameScoreText.GetComponent<TypewriterEffect>().fullText = $"Новый рекорд: {score}!"; // Текст для нового рекорда
+                    endGameScoreText.GetComponent<TypewriterEffect>().fullText = $"Это пекорд: {score}!"; // Текст для нового рекорда
                 }
                 else
                 {
