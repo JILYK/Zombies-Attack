@@ -1,23 +1,19 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class Tower : MonoBehaviour
 {
-    public GameObject EndGame; // Объект EndGame, который будет активироваться
-    public Text endGameScoreText; // Текст, который будет отображать очки при окончании игры
+    public GameObject EndGame;
+    public Text endGameScoreText;
     public Animator animator;
-    
+
     private void Awake()
     {
         animator.enabled = false;
-
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        
-        // Проверяем, сталкивается ли пуля с зомби
         ZombieController zombie = collision.GetComponent<ZombieController>();
         if (zombie != null)
         {
@@ -27,24 +23,23 @@ public class Tower : MonoBehaviour
 
             if (endGameScoreText != null)
             {
-                int score = GameManager.Instance.Score; // Получаем текущее количество очков
-                int highScore = PlayerPrefs.GetInt("HighScore", 0); // Получаем сохраненный рекорд, по умолчанию 0
+                int score = GameManager.Instance.Score;
+                int highScore = PlayerPrefs.GetInt("HighScore", 0);
 
-                // Проверяем, является ли текущий счет новым рекордом
+
                 if (score > highScore)
                 {
-                    PlayerPrefs.SetInt("HighScore", score); // Сохраняем новый рекорд
-                    PlayerPrefs.Save(); // Сохраняем изменения
-                    endGameScoreText.GetComponent<TypewriterEffect>().fullText = $"Это пекорд: {score}!"; // Текст для нового рекорда
+                    PlayerPrefs.SetInt("HighScore", score);
+                    PlayerPrefs.Save();
+                    endGameScoreText.GetComponent<TypewriterEffect>().fullText = $"Это пекорд: {score}!";
                 }
                 else
                 {
-                    endGameScoreText.GetComponent<TypewriterEffect>().fullText = $"Очки: {score} (Рекорд: {highScore})"; // Текст с обычными очками и рекордом
+                    endGameScoreText.GetComponent<TypewriterEffect>().fullText = $"Очки: {score} (Рекорд: {highScore})";
                 }
             }
 
-            EndGame.SetActive(true); // Активируем объект EndGame
-            print("Game Over"); // Сообщение о конце игры
+            EndGame.SetActive(true);
         }
     }
 }

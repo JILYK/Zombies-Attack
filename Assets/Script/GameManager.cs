@@ -19,7 +19,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Свойство для получения значения очков
     public int Score
     {
         get { return score; }

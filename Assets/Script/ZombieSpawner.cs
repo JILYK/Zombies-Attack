@@ -1,21 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ZombieSpawner : MonoBehaviour
 {
-    public GameObject zombiePrefab; // Префаб зомби
-    public Transform poolZombies; // Ссылка на объект PoolZombi, внутри которого находятся зомби
+    public GameObject zombiePrefab;
+    public Transform poolZombies;
     private List<Transform> zombieList = new List<Transform>();
-    // Массив объектов зон спавна
     public GameObject[] spawnAreas = new GameObject[3];
 
 
-    
-    
-    // Параметры для разных типов зомби
     [System.Serializable]
     public class ZombieType
     {
@@ -23,11 +18,11 @@ public class ZombieSpawner : MonoBehaviour
         public float speed;
         public int health;
         public int scoreValue;
-        public float spawnChance; // Вероятность спавна
-        public Color color;       // Цвет зомби
+        public float spawnChance;
+        public Color color;
     }
 
-    public ZombieType[] zombieTypes; // Массив типов зомби
+    public ZombieType[] zombieTypes;
 
     // Настройки сложности
     public float initialSpawnInterval = 2f; // Начальный интервал спавна
@@ -39,7 +34,7 @@ public class ZombieSpawner : MonoBehaviour
 
     void Start()
     {
-        currentSpawnInterval = initialSpawnInterval; // Устанавливаем начальный интервал
+        currentSpawnInterval = initialSpawnInterval;
         StartCoroutine(AdjustDifficultyOverTime());
         StartCoroutine(SpawnZombies());
     }
@@ -61,50 +56,51 @@ public class ZombieSpawner : MonoBehaviour
 
     IEnumerator SpawnZombies()
     {
-      
+        int indexZombie = 0;
         while (true)
         {
+            indexZombie++;
             if (zombieList.Count < 120)
             {
-                
-            // Выбираем случайную область спавна
-            GameObject chosenArea = spawnAreas[Random.Range(0, spawnAreas.Length)];
-
-            // Получаем размеры и положение из BoxCollider зоны спавна
-            BoxCollider2D areaCollider = chosenArea.GetComponent<BoxCollider2D>();
-            if (areaCollider == null)
-            {
-                Debug.LogWarning("BoxCollider2D не найден на объекте зоны спавна.");
-                yield break;
-            }
-
-            Vector2 spawnPosition = new Vector2(
-                Random.Range(areaCollider.bounds.min.x, areaCollider.bounds.max.x),
-                Random.Range(areaCollider.bounds.min.y, areaCollider.bounds.max.y)
-            );
-            
-            ZombieType chosenType = ChooseZombieType();
-            if (chosenType != null)
-            {
-                // Создаем зомби внутри объекта poolZombies
-                GameObject zombie = Instantiate(zombiePrefab, spawnPosition, Quaternion.identity, poolZombies);
-                ZombieController zombieController = zombie.GetComponent<ZombieController>();
-
-                // Устанавливаем параметры зомби
-                zombieController.speed = chosenType.speed;
-                zombieController.maxHealth = chosenType.health;
-                zombieController.scoreValue = chosenType.scoreValue;
-
-                // Устанавливаем цвет зомби
-                Image zombieImage = zombie.GetComponent<Image>();
-                if (zombieImage != null)
+                GameObject chosenArea = spawnAreas[Random.Range(0, spawnAreas.Length)];
+                BoxCollider2D areaCollider = chosenArea.GetComponent<BoxCollider2D>();
+                if (areaCollider == null)
                 {
-                    zombieImage.color = chosenType.color;
+                    Debug.LogWarning("BoxCollider2D не найден на объекте зоны спавна.");
+                    yield break;
                 }
-            zombieList.Add(zombie.transform);
-            }
-            // Ожидание перед следующим спавном
-            yield return new WaitForSeconds(currentSpawnInterval);
+
+                // кеширование bounds
+                Bounds bounds = areaCollider.bounds; // Сохраняем bounds в переменную
+                Vector2 spawnPosition = new Vector2(
+                    Random.Range(bounds.min.x, bounds.max.x),
+                    Random.Range(bounds.min.y, bounds.max.y)
+                );
+
+                ZombieType chosenType = ChooseZombieType();
+                if (chosenType != null)
+                {
+                    GameObject zombie = Instantiate(zombiePrefab, spawnPosition, Quaternion.identity, poolZombies);
+                    zombie.name += indexZombie;
+                    RectTransform rectTransform = zombie.GetComponent<RectTransform>();
+                    Vector3 newPosition = rectTransform.localPosition;
+                    newPosition.z = 0f; // Обнуляем координату Z
+                    rectTransform.localPosition = newPosition;
+
+                    ZombieController zombieController = zombie.GetComponent<ZombieController>();
+                    zombieController.speed = chosenType.speed;
+                    zombieController.maxHealth = chosenType.health;
+                    zombieController.scoreValue = chosenType.scoreValue;
+                    Image zombieImage = zombie.GetComponent<Image>();
+                    if (zombieImage != null)
+                    {
+                        zombieImage.color = chosenType.color;
+                    }
+
+                    zombieList.Add(zombie.transform);
+                }
+
+                yield return new WaitForSeconds(currentSpawnInterval);
             }
         }
     }
@@ -122,44 +118,33 @@ public class ZombieSpawner : MonoBehaviour
                 return type;
             }
         }
-        return zombieTypes[zombieTypes.Length - 1]; // Возвращаем последний тип по умолчанию, если выбор не удался
+
+        return zombieTypes[zombieTypes.Length - 1];
     }
 
-    // Метод для сортировки зомби по оси Y
     void SortZombies()
     {
-        // Удаляем уничтоженные объекты из списка
         zombieList.RemoveAll(zombie => zombie == null);
-
-        // Пороговое значение для сравнения (эпсилон)
-        float epsilon = 0.01f;  // Можно настроить в зависимости от нужной точности
-
-        // Сортировка списка зомби по оси Y в обратном порядке с учётом эпсилона
+        float epsilon = 0.01f;
         zombieList.Sort((img1, img2) =>
         {
             float difference = img1.transform.position.y - img2.transform.position.y;
             if (Mathf.Abs(difference) < epsilon)
             {
-                return 0; // Считаем их равными, если разница меньше эпсилона
+                return 0;
             }
-            return difference > 0 ? -1 : 1; // Меняем местами для обратной сортировки
-        });
 
-        // Применение порядка отрисовки
+            return difference > 0 ? -1 : 1;
+        });
         for (int i = 0; i < zombieList.Count; i++)
         {
             zombieList[i].transform.SetSiblingIndex(i);
         }
     }
 
-
-
-
-    // Визуализация областей спавна в редакторе
     private void OnDrawGizmos()
     {
-        Color[] colors = { Color.green, Color.blue, Color.red }; // Цвета для каждой области спавна
-
+        Color[] colors = { Color.green, Color.blue, Color.red };
         for (int i = 0; i < spawnAreas.Length; i++)
         {
             if (spawnAreas[i] != null)
@@ -167,11 +152,11 @@ public class ZombieSpawner : MonoBehaviour
                 BoxCollider2D areaCollider = spawnAreas[i].GetComponent<BoxCollider2D>();
                 if (areaCollider != null)
                 {
-                    Gizmos.color = new Color(colors[i].r, colors[i].g, colors[i].b, 0.3f); // Полупрозрачный цвет для заливки
-                    Gizmos.DrawCube(areaCollider.bounds.center, areaCollider.bounds.size);  // Заливка области
+                    Gizmos.color = new Color(colors[i].r, colors[i].g, colors[i].b, 0.3f);
+                    Gizmos.DrawCube(areaCollider.bounds.center, areaCollider.bounds.size);
 
                     Gizmos.color = colors[i];
-                    Gizmos.DrawWireCube(areaCollider.bounds.center, areaCollider.bounds.size); // Контур области
+                    Gizmos.DrawWireCube(areaCollider.bounds.center, areaCollider.bounds.size);
                 }
             }
         }
